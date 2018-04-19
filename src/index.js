@@ -62,11 +62,11 @@ export default function ({types: t}) {
         return descriptorValue;
     }
 
-    function getICUMessageValue(messagePath, {isJSXSource = false} = {}) {
+    function getICUMessageValue(messagePath, {isJSXSource = false, prettyPrint = false} = {}) {
         const message = getMessageDescriptorValue(messagePath);
 
         try {
-            return printICUMessage(message);
+            return printICUMessage(message, prettyPrint);
         } catch (parseError) {
             if (isJSXSource &&
                 messagePath.isLiteral() &&
@@ -101,12 +101,14 @@ export default function ({types: t}) {
         }, {});
     }
 
-    function evaluateMessageDescriptor({...descriptor}, {isJSXSource = false} = {}) {
+    function evaluateMessageDescriptor({...descriptor}, {isJSXSource = false} = {}, state) {
+        const {opts} = state;
         Object.keys(descriptor).forEach((key) => {
             const valuePath = descriptor[key];
 
             if (key === 'defaultMessage') {
-                descriptor[key] = getICUMessageValue(valuePath, {isJSXSource});
+                const prettyPrint = !!(opts && opts.prettyPrint)
+                descriptor[key] = getICUMessageValue(valuePath, {isJSXSource, prettyPrint});
             } else {
                 descriptor[key] = getMessageDescriptorValue(valuePath);
             }
@@ -256,7 +258,7 @@ export default function ({types: t}) {
                         // context, then store it.
                         descriptor = evaluateMessageDescriptor(descriptor, {
                             isJSXSource: true,
-                        });
+                        }, state);
 
                         storeMessage(descriptor, path, state);
 
@@ -307,7 +309,7 @@ export default function ({types: t}) {
                     );
 
                     // Evaluate the Message Descriptor values, then store it.
-                    descriptor = evaluateMessageDescriptor(descriptor);
+                    descriptor = evaluateMessageDescriptor(descriptor, {}, state);
                     storeMessage(descriptor, messageObj, state);
 
                     // Remove description since it's not used at runtime.

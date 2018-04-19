@@ -15,12 +15,12 @@ const ESCAPED_CHARS = {
 
 const ESAPE_CHARS_REGEXP = /\\#|[{}\\]/g;
 
-export default function (message) {
+export default function (message, prettyPrint = false) {
     let ast = parse(message);
-    return printICUMessage(ast);
+    return printICUMessage(ast, prettyPrint);
 }
 
-function printICUMessage(ast) {
+function printICUMessage(ast, prettyPrint) {
     let printedNodes = ast.elements.map((node) => {
         if (node.type === 'messageTextElement') {
             return printMessageTextASTNode(node);
@@ -39,7 +39,7 @@ function printICUMessage(ast) {
         case 'plural':
         case 'selectordinal':
         case 'select':
-            return printOptionalFormatASTNode(node);
+            return printOptionalFormatASTNode(node, prettyPrint);
         }
     });
 
@@ -68,7 +68,7 @@ function printSimpleFormatASTNode({id, format}) {
     return `{${id}, ${argumentType}${style}}`;
 }
 
-function printOptionalFormatASTNode({id, format}) {
+function printOptionalFormatASTNode({id, format}, prettyPrint) {
     let argumentType = getArgumentType(format);
     let offset = format.offset ? `, offset:${format.offset}` : '';
 
@@ -76,6 +76,10 @@ function printOptionalFormatASTNode({id, format}) {
         let optionValue = printICUMessage(option.value);
         return ` ${option.selector} {${optionValue}}`;
     });
+
+    if (prettyPrint) return `{${id}, ${argumentType}${offset},
+   ${options.join('\n   ')}
+}`
 
     return `{${id}, ${argumentType}${offset},${options.join('')}}`;
 }
